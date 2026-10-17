@@ -34,6 +34,10 @@ export default function ConnectEmailPage() {
       ]);
       const workspaceData = await workspacesResponse.json();
       const accountData = await accountsResponse.json();
+      if (workspacesResponse.status === 401 || accountsResponse.status === 401) {
+        router.push("/login");
+        return;
+      }
       if (!workspacesResponse.ok) throw new Error(workspaceData.error ?? "Please sign in before connecting email.");
       if (!accountsResponse.ok) throw new Error(accountData.error ?? "Could not load connected mailboxes.");
       const available = (workspaceData.workspaces ?? []) as Workspace[];
