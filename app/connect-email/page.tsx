@@ -16,15 +16,14 @@ export default function ConnectEmailPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [imapHost, setImapHost] = useState("imap.hostinger.com");
-  const [smtpHost, setSmtpHost] = useState("smtp.hostinger.com");
+  const imapHost = "imap.hostinger.com";
+  const smtpHost = "smtp.hostinger.com";
   const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [messages, setMessages] = useState<MailRow[]>([]);
-  const [previewAccount, setPreviewAccount] = useState("");
 
   async function load() {
     setLoading(true); setError("");
@@ -60,7 +59,6 @@ export default function ConnectEmailPage() {
       setPassword("");
       setNotice(`Mailbox ${data.account.email} connected. Credentials were encrypted before being stored.`);
       await load();
-      setPreviewAccount(data.account.id);
       await preview(data.account.id);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Mailbox connection failed.");
@@ -68,7 +66,7 @@ export default function ConnectEmailPage() {
   }
 
   async function preview(accountId: string) {
-    setPreviewAccount(accountId); setError(""); setNotice("");
+    setError(""); setNotice("");
     try {
       const response = await fetch(`/api/email/hostinger/messages?accountId=${encodeURIComponent(accountId)}&limit=20`, { cache: "no-store" });
       const data = await response.json();
