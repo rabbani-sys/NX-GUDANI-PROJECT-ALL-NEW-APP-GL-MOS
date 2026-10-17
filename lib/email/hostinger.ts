@@ -50,7 +50,7 @@ export async function getRecentHostingerMessages(credentials: HostingerCredentia
         subject: message.envelope?.subject ?? "(no subject)",
         fromName: sender?.name ?? "",
         fromAddress: sender?.address ?? "",
-        date: message.internalDate ? message.internalDate.toISOString() : null,
+        date: message.internalDate ? (typeof message.internalDate === "string" ? new Date(message.internalDate).toISOString() : message.internalDate.toISOString()) : null,
         unread: !message.flags?.has("\\Seen"),
         messageId: message.envelope?.messageId ?? null,
       });
