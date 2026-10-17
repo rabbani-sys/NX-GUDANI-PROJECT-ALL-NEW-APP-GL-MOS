@@ -163,6 +163,23 @@ $$;
 revoke all on function public.is_workspace_member(uuid) from public;
 grant execute on function public.is_workspace_member(uuid) to authenticated;
 
+create or replace function public.has_workspace_role(target_workspace_id uuid, allowed_roles text[])
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select exists (
+    select 1 from public.workspace_members wm
+    where wm.workspace_id = target_workspace_id
+      and wm.user_id = auth.uid()
+      and wm.role = any(allowed_roles)
+  );
+$;
+revoke all on function public.has_workspace_role(uuid, text[]) from public;
+grant execute on function public.has_workspace_role(uuid, text[]) to authenticated;
+
 alter table public.workspaces enable row level security;
 alter table public.workspace_members enable row level security;
 alter table public.contacts enable row level security;
@@ -181,8 +198,8 @@ for insert to authenticated
 with check (created_by = auth.uid());
 create policy "workspace admins can update workspace" on public.workspaces
 for update to authenticated
-using (created_by = auth.uid() or exists (select 1 from public.workspace_members wm where wm.workspace_id = id and wm.user_id = auth.uid() and wm.role in ('owner','admin')))
-with check (created_by = auth.uid() or exists (select 1 from public.workspace_members wm where wm.workspace_id = id and wm.user_id = auth.uid() and wm.role in ('owner','admin')));
+using (created_by = auth.uid() or public.has_workspace_role(id, array['owner','admin']))
+with check (created_by = auth.uid() or public.has_workspace_role(id, array['owner','admin']));
 
 create policy "members can view workspace memberships" on public.workspace_members
 for select to authenticated
@@ -191,15 +208,15 @@ create policy "workspace creator or admins can add members" on public.workspace_
 for insert to authenticated
 with check (
   (user_id = auth.uid() and exists (select 1 from public.workspaces w where w.id = workspace_id and w.created_by = auth.uid()))
-  or exists (select 1 from public.workspace_members wm where wm.workspace_id = workspace_id and wm.user_id = auth.uid() and wm.role in ('owner','admin'))
+  or public.has_workspace_role(workspace_id, array['owner','admin'])
 );
 create policy "workspace admins can update memberships" on public.workspace_members
 for update to authenticated
-using (exists (select 1 from public.workspace_members wm where wm.workspace_id = workspace_id and wm.user_id = auth.uid() and wm.role in ('owner','admin')))
-with check (exists (select 1 from public.workspace_members wm where wm.workspace_id = workspace_id and wm.user_id = auth.uid() and wm.role in ('owner','admin')));
+using (public.has_workspace_role(workspace_id, array['owner','admin']))
+with check (public.has_workspace_role(workspace_id, array['owner','admin']));
 create policy "workspace admins can remove memberships" on public.workspace_members
 for delete to authenticated
-using (exists (select 1 from public.workspace_members wm where wm.workspace_id = workspace_id and wm.user_id = auth.uid() and wm.role in ('owner','admin')));
+using (public.has_workspace_role(workspace_id, array['owner','admin']));
 
 create policy "members access contacts" on public.contacts for all to authenticated
 using (public.is_workspace_member(workspace_id)) with check (public.is_workspace_member(workspace_id));
