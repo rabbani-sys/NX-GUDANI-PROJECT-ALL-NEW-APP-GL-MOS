@@ -201,7 +201,7 @@ export default function Home() {
             <div className="header-actions"><button className="button button-secondary" onClick={() => setNotice("Provider connections will be enabled after secure OAuth and server-side adapters are configured.")}><Plus size={16}/> Connect channel</button><button className="button button-primary" onClick={() => setShowCompose(true)}><Send size={16}/> Compose</button></div>
           </div>
 
-          {liveMailboxEmail && <div className="live-data-note"><CheckCheck size={14}/> Connected to {liveMailboxEmail}. Inbox list is live; analytics and contact counts still include demo data.</div>}
+          {liveMailboxEmail && <div className="live-data-note"><Check size={14}/> Connected to {liveMailboxEmail}. Inbox list is live; analytics and contact counts still include demo data.</div>}
           {notice && <div className="notice"><div><Check size={16}/>{notice}</div><button aria-label="Dismiss notice" onClick={() => setNotice("")}><X size={16}/></button></div>}
 
           {section === "inbox" ? <>
