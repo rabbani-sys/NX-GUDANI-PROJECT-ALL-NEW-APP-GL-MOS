@@ -4,11 +4,11 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity, Archive, ArrowDownLeft, ArrowUpRight, Bell, BriefcaseBusiness,
-  CalendarClock, Check, CheckCheck, ChevronDown, CircleHelp, ContactRound,
-  FileText, Filter, Inbox, Instagram, LayoutDashboard, Mail, Megaphone,
-  MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, ShieldCheck,
-  Sparkles, Users, Video, X, Youtube, Zap, Menu, Paperclip, Clock3, Star,
-  AlertTriangle, Globe2, BarChart3, Layers3, Linkedin, MessageSquareText
+  CalendarClock, Check, ChevronDown, ContactRound, FileText, Filter, Inbox,
+  Instagram, LayoutDashboard, Mail, Megaphone, MessageCircle, MoreHorizontal,
+  Plus, Search, Send, Settings, ShieldCheck, Sparkles, Users, X, Youtube, Zap,
+  Menu, Paperclip, Clock3, Star, AlertTriangle, Globe2, BarChart3, Layers3,
+  Linkedin, MessageSquareText
 } from "lucide-react";
 
 type Channel = "Email" | "WhatsApp" | "Instagram" | "LinkedIn" | "Telegram";
