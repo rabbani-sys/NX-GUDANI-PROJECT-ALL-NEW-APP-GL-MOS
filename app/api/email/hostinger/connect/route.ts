@@ -29,8 +29,8 @@ export async function POST(request: Request) {
     if (!workspaceId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password) {
       return jsonError("Workspace, valid mailbox address and mailbox password are required.", 400);
     }
-    if (!imapHost || !smtpHost || ![993, 143].includes(imapPort) || ![465, 587].includes(smtpPort)) {
-      return jsonError("Use supported IMAP/SMTP host and port settings.", 400);
+    if (imapHost !== "imap.hostinger.com" || smtpHost !== "smtp.hostinger.com" || imapPort !== 993 || smtpPort !== 465) {
+      return jsonError("This first version supports the secure Hostinger defaults only: imap.hostinger.com:993 and smtp.hostinger.com:465.", 400);
     }
 
     const { data: membership } = await sessionClient
