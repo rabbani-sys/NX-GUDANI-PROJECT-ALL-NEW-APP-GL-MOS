@@ -99,11 +99,9 @@ export default function Home() {
         });
         if (!cancelled) {
           setLiveMailboxEmail(account.account_address);
-          if (liveMessages.length > 0) {
-            setMessages(liveMessages);
-            setSelectedId(liveMessages[0].id);
-            setFolder("All messages");
-          }
+          setMessages(liveMessages);
+          if (liveMessages.length > 0) setSelectedId(liveMessages[0].id);
+          setFolder("All messages");
         }
       } catch {
         // Keep the dashboard in demo mode when no live mailbox is configured.
