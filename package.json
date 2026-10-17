@@ -14,7 +14,9 @@
     "lucide-react": "^0.468.0",
     "next": "^15.5.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "imapflow": "^1.0.195",
+    "nodemailer": "^7.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -22,6 +24,7 @@
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.5.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "@types/nodemailer": "^6.4.17"
   }
 }
