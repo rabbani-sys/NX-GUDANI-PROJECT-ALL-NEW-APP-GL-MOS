@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity, Archive, ArrowDownLeft, ArrowUpRight, Bell, BriefcaseBusiness,
@@ -15,7 +15,7 @@ type Channel = "Email" | "WhatsApp" | "Instagram" | "LinkedIn" | "Telegram";
 type Message = {
   id: number; name: string; address: string; subject: string; preview: string;
   time: string; channel: Channel; category: string; unread: boolean; color: string;
-  initials: string; starred?: boolean; priority?: boolean;
+  initials: string; starred?: boolean; priority?: boolean; isLive?: boolean;
 };
 
 const seedMessages: Message[] = [
@@ -68,6 +68,52 @@ export default function Home() {
   const [composeBody, setComposeBody] = useState("");
   const [notice, setNotice] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+  const [liveMailboxEmail, setLiveMailboxEmail] = useState("");
+  const [liveSyncing, setLiveSyncing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadLiveInbox() {
+      setLiveSyncing(true);
+      try {
+        const accountResponse = await fetch("/api/email/hostinger/accounts", { cache: "no-store" });
+        if (!accountResponse.ok) return;
+        const accountData = await accountResponse.json();
+        const account = accountData.accounts?.[0];
+        if (!account) return;
+        const messageResponse = await fetch(`/api/email/hostinger/messages?accountId=${encodeURIComponent(account.id)}&limit=25`, { cache: "no-store" });
+        if (!messageResponse.ok) return;
+        const messageData = await messageResponse.json();
+        const palette = ["lavender", "peach", "mint", "blue", "rose", "gold"];
+        const liveMessages: Message[] = (messageData.messages ?? []).map((m: { uid: number; subject: string; fromName: string; fromAddress: string; date: string | null; unread: boolean }, index: number) => {
+          const name = m.fromName || m.fromAddress || "Unknown sender";
+          const date = m.date ? new Date(m.date) : null;
+          return {
+            id: m.uid, name, address: m.fromAddress, subject: m.subject,
+            preview: "Live message metadata loaded. Full message body and attachments are not yet enabled.",
+            time: date ? date.toLocaleDateString() : "Inbox", channel: "Email" as const,
+            category: "Inbox", unread: m.unread, color: palette[index % palette.length],
+            initials: name.split(/\\s+/).map((part: string) => part[0]).join("").slice(0, 2).toUpperCase(),
+            isLive: true,
+          };
+        });
+        if (!cancelled) {
+          setLiveMailboxEmail(account.account_address);
+          if (liveMessages.length > 0) {
+            setMessages(liveMessages);
+            setSelectedId(liveMessages[0].id);
+            setFolder("All messages");
+          }
+        }
+      } catch {
+        // Keep the dashboard in demo mode when no live mailbox is configured.
+      } finally {
+        if (!cancelled) setLiveSyncing(false);
+      }
+    }
+    void loadLiveInbox();
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = useMemo(() => messages.filter((m) => {
     const text = (m.name + " " + m.address + " " + m.subject + " " + m.preview + " " + m.category).toLowerCase();
@@ -88,8 +134,9 @@ export default function Home() {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, starred: !m.starred } : m));
   }
   function archiveMessage(id: number) {
+    const current = messages.find((m) => m.id === id);
     setMessages((prev) => prev.filter((m) => m.id !== id));
-    setNotice("Conversation archived in this demo view.");
+    setNotice(current?.isLive ? "Hidden from this dashboard view only. The message remains unchanged in your mailbox." : "Conversation hidden in this demo view.");
   }
   function saveDraft() {
     setNotice("Draft saved in this demo session. Connect a mail provider to persist drafts.");
@@ -145,7 +192,7 @@ export default function Home() {
       <section className="main-area">
         <header className="topbar">
           <div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileNav(true)}><Menu size={20}/></button><div className="breadcrumbs">GL-MOS <span>/</span> Communication Cloud <span>/</span> <strong>{pageTitles[section]}</strong></div></div>
-          <div className="topbar-actions"><div className="demo-pill"><span className="pulse-dot" /> DEMO MODE</div><button className="icon-button notification-button" aria-label="Notifications" onClick={() => setNotice("You are all caught up in this demo workspace.")}><Bell size={18}/><i /></button><div className="top-avatar">MR</div></div>
+          <div className="topbar-actions"><div className="demo-pill"><span className="pulse-dot" /> {liveMailboxEmail ? "LIVE INBOX" : liveSyncing ? "CHECKING MAIL" : "DEMO MODE"}</div><button className="icon-button notification-button" aria-label="Notifications" onClick={() => setNotice("You are all caught up in this demo workspace.")}><Bell size={18}/><i /></button><div className="top-avatar">MR</div></div>
         </header>
 
         <div className="page-content">
@@ -154,12 +201,13 @@ export default function Home() {
             <div className="header-actions"><button className="button button-secondary" onClick={() => setNotice("Provider connections will be enabled after secure OAuth and server-side adapters are configured.")}><Plus size={16}/> Connect channel</button><button className="button button-primary" onClick={() => setShowCompose(true)}><Send size={16}/> Compose</button></div>
           </div>
 
+          {liveMailboxEmail && <div className="live-data-note"><CheckCheck size={14}/> Connected to {liveMailboxEmail}. Inbox list is live; analytics and contact counts still include demo data.</div>}
           {notice && <div className="notice"><div><Check size={16}/>{notice}</div><button aria-label="Dismiss notice" onClick={() => setNotice("")}><X size={16}/></button></div>}
 
           {section === "inbox" ? <>
             <div className="metrics-grid">
-              <div className="metric-card"><div className="metric-top"><span>Open conversations</span><span className="metric-icon purple"><Inbox size={17}/></span></div><div className="metric-value">128</div><div className="metric-foot"><span className="trend-up"><ArrowUpRight size={14}/> 8.4%</span> vs. last week</div></div>
-              <div className="metric-card"><div className="metric-top"><span>Needs your reply</span><span className="metric-icon amber"><Clock3 size={17}/></span></div><div className="metric-value">24</div><div className="metric-foot"><span className="metric-neutral">6 high priority</span></div></div>
+              <div className="metric-card"><div className="metric-top"><span>Open conversations</span><span className="metric-icon purple"><Inbox size={17}/></span></div><div className="metric-value">{liveMailboxEmail ? messages.length : "128"}</div><div className="metric-foot"><span className="trend-up"><ArrowUpRight size={14}/> 8.4%</span> vs. last week</div></div>
+              <div className="metric-card"><div className="metric-top"><span>Needs your reply</span><span className="metric-icon amber"><Clock3 size={17}/></span></div><div className="metric-value">{liveMailboxEmail ? unreadCount : "24"}</div><div className="metric-foot"><span className="metric-neutral">6 high priority</span></div></div>
               <div className="metric-card"><div className="metric-top"><span>New contacts</span><span className="metric-icon green"><Users size={17}/></span></div><div className="metric-value">36</div><div className="metric-foot"><span className="trend-up"><ArrowUpRight size={14}/> 12.1%</span> this month</div></div>
               <div className="metric-card"><div className="metric-top"><span>Delivery alerts</span><span className="metric-icon red"><Activity size={17}/></span></div><div className="metric-value">9</div><div className="metric-foot"><span className="metric-warning"><AlertTriangle size={13}/> Review before retry</span></div></div>
             </div>
@@ -183,7 +231,7 @@ export default function Home() {
                   <div className="detail-toolbar"><div className="detail-toolbar-left"><span className="status-badge"><span/> Open</span><span className="detail-channel">{selected.channel} conversation</span></div><div className="detail-toolbar-actions"><button className="icon-button" title="Star conversation" onClick={() => toggleStar(selected.id)}><Star size={17} className={selected.starred ? "star-filled" : ""} fill={selected.starred ? "currentColor" : "none"}/></button><button className="icon-button" title="Archive conversation" onClick={() => archiveMessage(selected.id)}><Archive size={17}/></button><button className="icon-button" title="More actions" onClick={() => setNotice("More conversation actions will be connected to the provider adapter.")}><MoreHorizontal size={18}/></button></div></div>
                   <div className="thread-header"><div className={`contact-avatar large ${selected.color}`}>{selected.initials}</div><div className="thread-person"><h2>{selected.name}</h2><span>{selected.address}</span><div className="thread-tags"><span className={`channel-chip ${channelMeta[selected.channel].color}`}>{selected.channel}</span><span className="category-chip">{selected.category}</span></div></div></div>
                   <div className="thread-divider"><span>TODAY · {selected.time}</span></div>
-                  <div className="email-card"><div className="email-card-head"><div><strong>{selected.subject}</strong><span>To: Rabbani Placement · Inbox</span></div><button className="icon-button" aria-label="More email options" onClick={() => setNotice("Message options are available after connecting the real provider.")}><MoreHorizontal size={17}/></button></div><div className="email-body"><p>Hello team,</p><p>{selected.preview}</p><p>Please let me know if any additional information is required. I look forward to your update.</p><p>Best regards,<br/>{selected.name}</p></div><div className="email-card-foot"><span><Paperclip size={14}/> No attachments in demo</span><button onClick={() => setNotice("Original message content is sample data. Connect the provider to view real content.")}>View original <ArrowUpRight size={13}/></button></div></div>
+                  <div className="email-card"><div className="email-card-head"><div><strong>{selected.subject}</strong><span>To: Rabbani Placement · Inbox</span></div><button className="icon-button" aria-label="More email options" onClick={() => setNotice("Message options are available after connecting the real provider.")}><MoreHorizontal size={17}/></button></div><div className="email-body">{selected.isLive ? <><p>This message is from the connected mailbox. The current adapter loads message metadata only.</p><p>Full body content, inline images and attachments will be added in the next mail-sync phase. The original message has not been modified.</p></> : <><p>Hello team,</p><p>{selected.preview}</p><p>Please let me know if any additional information is required. I look forward to your update.</p><p>Best regards,<br/>{selected.name}</p></>}</div><div className="email-card-foot"><span><Paperclip size={14}/> No attachments in demo</span><button onClick={() => setNotice("Original message content is sample data. Connect the provider to view real content.")}>View original <ArrowUpRight size={13}/></button></div></div>
                   <div className="ai-insight"><div className="ai-insight-icon"><Sparkles size={17}/></div><div><strong>Communication assistant</strong><p>Suggested next step: review the message, confirm the owner and set a follow-up date. AI summaries are not connected in demo mode.</p><button onClick={() => setActive("tasks")}>Create follow-up <ArrowUpRight size={13}/></button></div></div>
                   <div className="reply-box"><div className="reply-box-top"><span>Quick reply</span><span className="reply-disabled">Demo only</span></div><textarea placeholder="Connect this channel to reply to real messages..." disabled/><div className="reply-box-foot"><span>Replies are disabled until a provider is connected.</span><button className="button button-primary" disabled><Send size={14}/> Send reply</button></div></div>
                 </> : <div className="empty-state"><Inbox size={24}/><strong>Select a conversation</strong></div>}
